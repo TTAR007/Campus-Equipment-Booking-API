@@ -1,0 +1,27 @@
+{
+  "name": "campus-equipment-booking-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning --experimental-strip-types src/server.ts",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test test/api.test.ts",
+    "typecheck": "tsc --noEmit",
+    "dev:cloudflare": "wrangler dev",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.0",
+    "hono": "^4.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.147.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
