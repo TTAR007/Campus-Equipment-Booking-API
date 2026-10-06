@@ -1,0 +1,14 @@
+Base API URL: https://campus-equipment-booking-api.tar127290.workers.dev/api
+Equipment list: GET /equipment -> 200 [{"id":"eq-1","name":"Projector A","location":"Building 1"},{"id":"eq-2","name":"Camera B","location":"Media Lab"}]
+Create: POST /bookings -> 201 {"id":"fb6cc831-4149-473a-8d48-48c2685fd225","equipmentId":"eq-1","borrowerName":"Smoke Test","startAt":"2026-10-08T06:39:51.956Z","endAt":"2026-10-08T08:39:51.956Z","purpose":"HTTP verification"}
+Read one: GET /bookings/fb6cc831-4149-473a-8d48-48c2685fd225 -> 200 {"id":"fb6cc831-4149-473a-8d48-48c2685fd225","equipmentId":"eq-1","borrowerName":"Smoke Test","startAt":"2026-10-08T06:39:51.956Z","endAt":"2026-10-08T08:39:51.956Z","purpose":"HTTP verification"}
+Read list: GET /bookings -> 200 [{"id":"fb6cc831-4149-473a-8d48-48c2685fd225","equipmentId":"eq-1","borrowerName":"Smoke Test","startAt":"2026-10-08T06:39:51.956Z","endAt":"2026-10-08T08:39:51.956Z","purpose":"HTTP verification"}]
+Update: PATCH /bookings/fb6cc831-4149-473a-8d48-48c2685fd225 -> 200 {"id":"fb6cc831-4149-473a-8d48-48c2685fd225","equipmentId":"eq-1","borrowerName":"Smoke Test","startAt":"2026-10-08T06:39:51.956Z","endAt":"2026-10-08T08:39:51.956Z","purpose":"Updated HTTP verification"}
+Conflict: POST /bookings -> 409 {"error":"Booking time conflicts with an existing booking"}
+Adjacent booking: POST /bookings -> 201 {"id":"928df894-bbc2-426d-82ca-913ec0fc472a","equipmentId":"eq-1","borrowerName":"Smoke Test","startAt":"2026-10-08T08:39:51.956Z","endAt":"2026-10-08T10:39:51.956Z","purpose":"HTTP verification"}
+Update conflict: PATCH /bookings/928df894-bbc2-426d-82ca-913ec0fc472a -> 409 {"error":"Booking time conflicts with an existing booking"}
+Delete adjacent booking: DELETE /bookings/928df894-bbc2-426d-82ca-913ec0fc472a -> 204 
+Invalid time: POST /bookings -> 400 {"error":"startAt must be before endAt"}
+Missing equipment: POST /bookings -> 404 {"error":"Equipment not found"}
+Delete: DELETE /bookings/fb6cc831-4149-473a-8d48-48c2685fd225 -> 204 
+Deleted booking: GET /bookings/fb6cc831-4149-473a-8d48-48c2685fd225 -> 404 {"error":"Booking not found"}

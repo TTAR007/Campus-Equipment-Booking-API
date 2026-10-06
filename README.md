@@ -1,78 +1,97 @@
 # Campus Equipment Booking API
 
-A TypeScript/Hono API backed by local SQLite or Cloudflare Workers with D1. Both versions seed two equipment records and prevent overlapping bookings for the same item.
+This is a TypeScript/Hono API for reserving shared equipment. It runs locally with SQLite and on Cloudflare Workers with D1.
+
+## Requirements
+
+- Node.js 24 or newer
+- npm
+- PowerShell 7 and `curl.exe` to rerun the recorded HTTP tests on Windows
+
+Open this project folder in VS Code, then open **Terminal → New Terminal**. Run the commands below from the project folder.
 
 ## Run locally
-
-Requires Node.js 24 or newer. From this directory:
 
 ```powershell
 npm install
 npm start
 ```
 
-The Base API URL is `http://localhost:8787/api`. Set `PORT` and `DB_FILE` to change the port and SQLite file. The default database file is `bookings.sqlite` in the current directory. It is created on first run and is excluded from Git.
+The local Base API URL is `http://localhost:8787/api`. The server creates `bookings.sqlite` and seeds two equipment records on first run. Press **Ctrl+C** to stop it.
 
-## Run tests
+To change the port or database file in PowerShell, set `PORT` or `DB_FILE` before `npm start`.
 
-From the project directory, run:
+## Check the API
+
+In a second terminal, run the automated checks:
 
 ```powershell
 npm test
 npm run typecheck
 ```
 
-To rerun the real HTTP tests against the deployed API on Windows, run:
+The deployed Base API URL is:
+
+```text
+https://campus-equipment-booking-api.tar127290.workers.dev/api
+```
+
+The Base URL returns a short status response. Use these URLs to see API data:
+
+- [Equipment](https://campus-equipment-booking-api.tar127290.workers.dev/api/equipment)
+- [Bookings](https://campus-equipment-booking-api.tar127290.workers.dev/api/bookings)
+
+To rerun the live HTTP test cases with `curl.exe` and save their responses:
 
 ```powershell
 pwsh -NoProfile -File scripts/curl-evidence.ps1
 ```
 
-This uses `curl.exe`, checks the HTTP statuses, saves the responses to `CURL_TEST_EVIDENCE.md`, and deletes its test booking. To regenerate the results image, run:
+The script tests successful requests and `400`, `404`, and `409` errors. It deletes its test booking at the end and writes [CURL_TEST_EVIDENCE.md](CURL_TEST_EVIDENCE.md). The test summary and results image are in [TEST_EVIDENCE.md](TEST_EVIDENCE.md). To regenerate the image from the transcript, run:
 
 ```powershell
 pwsh -NoProfile -File scripts/render-curl-evidence.ps1
 ```
 
-The provided [curl_test_guide.md](curl_test_guide.md) has individual HTTP commands. The recorded results are in [TEST_EVIDENCE.md](TEST_EVIDENCE.md).
+The image is a rendering of real cURL output, not a direct desktop screenshot. The instructor's [cURL guide](curl_test_guide.md) has individual requests you can run manually.
 
-## Cloudflare Workers deployment
+## Run the Cloudflare Worker locally
 
-Requires a Cloudflare account. The Worker code is in `src/worker.ts`; D1 schema and seed data are in `migrations/0001_initial.sql`.
-
-Deployed Base API URL: `https://campus-equipment-booking-api.tar127290.workers.dev/api`.
-Opening the Worker root or `/api` in a browser returns a short JSON status. To see the equipment data directly, open `https://campus-equipment-booking-api.tar127290.workers.dev/api/equipment`.
-
-The D1 database ID in `wrangler.jsonc` belongs to this deployment. For this same Cloudflare account, install dependencies and redeploy with:
+Stop `npm start` first because both servers use port 8787 by default. Then run:
 
 ```powershell
-npm install
-npm run db:migrate:remote
-npm run deploy
+npm run db:migrate:local
+npm run dev:cloudflare
 ```
 
-To deploy in a different Cloudflare account, first authenticate and create a new D1 database:
+In another terminal, set the Base URL and run the HTTP smoke test:
+
+```powershell
+$env:BASE_URL = 'http://localhost:8787/api'
+node scripts/smoke.mjs
+```
+
+Wrangler stores its local D1 data in `.wrangler/`. This is separate from `bookings.sqlite`.
+
+## Deploy to Cloudflare
+
+The Worker is already deployed. Its configuration and D1 database ID are in `wrangler.jsonc`. To redeploy to the same Cloudflare account:
 
 ```powershell
 npm install
 npx wrangler login
-npx wrangler d1 create campus-equipment-booking-db
-```
-
-Copy the returned `database_id` into `wrangler.jsonc`, replacing the existing ID. Then run:
-
-```powershell
 npm run db:migrate:remote
 npm run deploy
 ```
 
-Wrangler prints the Worker URL. Use that URL plus `/api` as `BASE_URL` for `scripts/smoke.mjs` or the provided cURL guide. For example, in PowerShell:
+To deploy to a different Cloudflare account, run `npx wrangler d1 create campus-equipment-booking-db` after logging in. Replace `database_id` in `wrangler.jsonc` with the ID returned by that command, then run `npm run db:migrate:remote` and `npm run deploy`. Wrangler prints the new Worker URL. The Cloudflare entry point is `src/worker.ts`; the D1 schema and seed data are in `migrations/0001_initial.sql`.
 
-```powershell
-$env:BASE_URL = 'https://your-worker.your-subdomain.workers.dev/api'
-node scripts/smoke.mjs
-```
+## Project documents
 
-To verify the Worker locally before deploying, stop `npm start` if it is running, then run `npm run db:migrate:local` and `npm run dev:cloudflare`. In another terminal, set `BASE_URL` to `http://localhost:8787/api` and run `node scripts/smoke.mjs`. Local Wrangler D1 state is in `.wrangler/` and is excluded from Git. The local SQLite file is separate from the D1 database; existing local bookings are not copied to Cloudflare.
+- [API_CONTRACT.md](API_CONTRACT.md): endpoints, payloads, status codes, and validation rules
+- [SCHEMA.md](SCHEMA.md): database relationship and overlap rule
+- [TEST_EVIDENCE.md](TEST_EVIDENCE.md): test summary, results image, and links to raw HTTP output
+- [QUALITY_GATE_REVIEW.md](QUALITY_GATE_REVIEW.md): findings, fixes, and evidence
+- [AI_LOG.md](AI_LOG.md): AI assistance and verification record
 
-If PowerShell blocks `npm` because of its script execution policy, select **Command Prompt** as the VS Code terminal profile and run the same commands there.
+If PowerShell blocks `npm` because of its script execution policy, select **Command Prompt** as the VS Code terminal profile and run the same `npm` commands there.

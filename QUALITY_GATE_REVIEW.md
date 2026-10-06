@@ -1,19 +1,17 @@
 # Quality Gate Review
 
-The first source version was preserved in `initial_version.zip` before the final verification additions. This records a source snapshot; it does not prove that the exam's minute-30 checkpoint occurred. A student taking the timed exam should record that checkpoint separately at the required time.
+This review follows the instructor's `quality_gate.md`. `initial_version.zip` preserves a first source version for comparison with the later work. The archive does not, by itself, prove that the timed minute-30 checkpoint occurred.
 
-| Area | What I found | How I fixed it | Evidence |
+| Quality Gate area | Finding | Action taken | Evidence |
 | --- | --- | --- | --- |
-| Reliability / Accuracy | The first test set used only in-memory SQLite, so it did not verify that bookings survive a server restart. | Added a test that creates a booking in a file database, closes it, reopens it, and reads the same booking. | `bookings survive closing and reopening the SQLite file` passes in `npm.cmd test`. |
-| Implementation / Security | Parameter binding was used, but no test checked a value resembling SQL. | Added a test with `"'; DROP TABLE equipment; --"` as a borrower name and checked that it remains data and equipment still exists. | `request text resembling SQL stays data and does not alter the schema` passes. |
-| Reasoning / You Own It | The overlap rule was in code but needed a clear explanation of why bookings that touch at their endpoints are allowed. | Documented the half-open interval rule in `API_CONTRACT.md` and `SCHEMA.md`; tested both adjacent times and conflicts on update. | `overlap is rejected on create and update, while touching times and other equipment work` passes. The author should explain the rule independently. |
-| Testing | The first checks exercised Hono in process but did not show results over a running HTTP server. | Added `scripts/smoke.mjs`, ran it against `http://localhost:8787/api`, and recorded status and response evidence. | `TEST_EVIDENCE.md` records 10 live HTTP cases, including `400`, `404`, and `409`. |
-| Reliability / Cloudflare | A separate D1 conflict lookup could race with another Worker request. | Added D1 triggers that reject overlapping insert and update statements inside SQLite. The Worker converts the trigger error to `409`. | The migration succeeded locally and remotely. A 13-case run against the deployed Worker returned `409` on both create and update conflicts, while an adjacent booking returned `201`. |
+| Reliability / Accuracy | The first tests used only in-memory SQLite, so they did not show that a booking survives closing the database. | Added a file-based test that creates a booking, closes SQLite, reopens it, and reads the same booking. | `npm test` passes **bookings survive closing and reopening the SQLite file**. |
+| Reliability | A separate Cloudflare D1 conflict query could race with another Worker request. | Added `BEFORE INSERT` and `BEFORE UPDATE` D1 triggers that reject an overlap as part of the write. | The deployed HTTP run returned `409` for a conflicting create and update; an adjacent booking returned `201`. See the [raw run output](SMOKE_TEST_EVIDENCE.txt). |
+| Implementation / Security | Bound SQL parameters were used, but the first tests did not check text that looked like SQL. | Added a test that stores `"'; DROP TABLE equipment; --"` as a borrower name. | `npm test` passes **request text resembling SQL stays data and does not alter the schema**; equipment remains available. |
+| Reasoning / You Own It | The booking boundary rule needed an explanation that could be checked against the code. | Documented the half-open time rule and why equal endpoints are allowed in [API_CONTRACT.md](API_CONTRACT.md) and [SCHEMA.md](SCHEMA.md). | Automated tests cover adjacent times, a self-update, and update conflicts. The deployed HTTP run covers adjacent times and update conflict. The student must be able to explain the rule personally. |
+| Execution Value / Testing | In-process tests alone did not provide real HTTP response evidence. | Ran live local and deployed HTTP checks, then saved actual `curl.exe` commands, status lines, and JSON bodies. | [CURL_TEST_EVIDENCE.md](CURL_TEST_EVIDENCE.md) records 11 deployed cases, including `201`, `204`, `400`, `404`, and `409`. |
 
-The student should review the code and evidence personally, document any further changes, and answer ownership questions from their own understanding.
+## Final check
 
-## Final audit against the four starter files
+On 2026-10-06, all six automated test groups and TypeScript checking passed. The deployed API passed the recorded live HTTP checks. The four instructor starter files were used as references and were not edited during this work.
 
-On 2026-10-06, the current local API passed all 6 automated test groups and TypeScript checking. The deployed Cloudflare API passed 13 live HTTP cases covering equipment, booking CRUD, invalid input, missing equipment, create and update conflicts, adjacent bookings, and deletion. Its `/api` entry point returned a short status without route lists. The four starter files were read for this audit and were not edited.
-
-The `initial_version.zip` archive contains the first source files, but an archive alone cannot establish the exact minute-30 checkpoint during a timed exam. The student's own verification and ability to explain the work also cannot be certified by Codex; these remain for the student to complete before submission.
+The student's own verification and ability to explain the implementation cannot be certified by Codex. The student should check the results and complete that part of the Quality Gate before submission.

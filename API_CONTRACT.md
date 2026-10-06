@@ -1,19 +1,28 @@
 # API Contract
 
-Base URL: `http://localhost:8787/api` locally, or `https://campus-equipment-booking-api.tar127290.workers.dev/api` on Cloudflare. All responses are JSON except successful `DELETE`, which has no body.
+## Base URL
 
-`GET /` and `GET /api` return `200` with `{"name":"Campus Equipment Booking API","status":"ok"}`.
+- Local: `http://localhost:8787/api`
+- Deployed: `https://campus-equipment-booking-api.tar127290.workers.dev/api`
 
-| Method | Path | Success | Response |
+Send and receive JSON. A successful `DELETE` has no response body. `GET /` and `GET /api` return `200` with `{"name":"Campus Equipment Booking API","status":"ok"}`.
+
+## Endpoints
+
+| Method | Path after Base URL | Success | Result |
 | --- | --- | ---: | --- |
-| GET | `/equipment` | 200 | Array of `{ id, name, location }` |
-| GET | `/bookings` | 200 | Array of bookings, sorted by start time |
-| GET | `/bookings/:id` | 200 | One booking |
-| POST | `/bookings` | 201 | Created booking |
-| PATCH | `/bookings/:id` | 200 | Updated booking |
-| DELETE | `/bookings/:id` | 204 | Empty body |
+| `GET` | `/equipment` | `200` | Array of equipment records |
+| `GET` | `/bookings` | `200` | Array of bookings sorted by `startAt`, then `id` |
+| `GET` | `/bookings/:id` | `200` | One booking |
+| `POST` | `/bookings` | `201` | Created booking |
+| `PATCH` | `/bookings/:id` | `200` | Updated booking |
+| `DELETE` | `/bookings/:id` | `204` | Empty body |
 
-Create request:
+Equipment records contain `id`, `name`, and `location`. The seeded records are `eq-1` (Projector A, Building 1) and `eq-2` (Camera B, Media Lab).
+
+## Booking data
+
+Send all five fields when creating a booking:
 
 ```json
 {
@@ -25,8 +34,28 @@ Create request:
 }
 ```
 
-All five fields are required on `POST`. `PATCH` accepts a non-empty subset. The response adds a generated UUID `id`. Strings must be non-empty after trimming. Timestamps must be valid UTC ISO 8601 values with seconds and optional 1–3 digit milliseconds, ending in `Z`. The start must precede the end. Times are stored and returned in canonical millisecond precision.
+The response contains those fields plus a generated UUID `id`. `PATCH` accepts a non-empty subset of the same five fields; omitted fields keep their current values. An explicit `null` is invalid.
 
-Two bookings conflict when they use the same equipment and `existing.startAt < proposed.endAt` and `existing.endAt > proposed.startAt`. Adjacent bookings are allowed. On update, the booking being edited is excluded from the conflict search.
+All fields must be non-empty strings after trimming. `equipmentId` must refer to an existing equipment record. Times must be valid UTC ISO 8601 strings with seconds, optional 1–3 digit milliseconds, and a final `Z`. The API returns times with three-digit milliseconds. `startAt` must be earlier than `endAt`. Unknown request fields are rejected.
 
-Errors have the form `{"error":"message"}`. `400` means malformed JSON, missing or invalid data, or an unknown field. `404` means a requested booking or referenced equipment does not exist. `409` means a booking time conflicts with an existing booking. Unexpected server errors return `500` in the same JSON shape.
+## Overlap rule
+
+For the same equipment, a proposed booking conflicts when:
+
+```text
+existing.startAt < proposed.endAt
+AND existing.endAt > proposed.startAt
+```
+
+The start is included and the end is excluded. A booking may start exactly when another ends. Updates exclude the booking being changed from the conflict check.
+
+## Errors
+
+Every error response is JSON with one `error` string, for example `{"error":"Booking not found"}`.
+
+| Status | Meaning |
+| ---: | --- |
+| `400` | Missing or invalid fields, invalid JSON or time range, or an unknown field |
+| `404` | Requested booking, referenced equipment, or route does not exist |
+| `409` | Booking time overlaps another booking for the same equipment |
+| `500` | Unexpected server error |
